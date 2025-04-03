@@ -1,5 +1,8 @@
 #!/bin/bash
 
+readonly CURR_IDENTITY_CONFIG_KEY="git-identity.current"
+readonly IDENTITY_CONFIG_KEY_PREFIX="git-identity"
+
 # TODO: Support non-stardard identity store
 
 # shellcheck disable=SC2034
@@ -36,7 +39,7 @@ lookup () {
   local identity="$1"
   local key="$2"
 
-  git config --get "identity.$identity.$key"
+  git config --get ${IDENTITY_CONFIG_KEY_PREFIX}."$identity".$key
 }
 
 format_identity () {
@@ -104,7 +107,7 @@ env_ssh_command () {
   shift
 
   if [ "x$identity" = "x" ]; then
-    identity="$(git config user.identity)"
+    identity="$(git config ${CURR_IDENTITY_CONFIG_KEY})"
   fi
 
   if [ -z "$identity" ];
@@ -138,7 +141,7 @@ use_identity () {
   if [ -n "$name" ];
   then
     echo "Using identity: $(format_identity "$identity")"
-    git config user.identity "$identity"
+    git config ${CURR_IDENTITY_CONFIG_KEY} "$identity"
     git config user.name "$name"
     git config user.email "$email"
 
@@ -171,7 +174,7 @@ use_identity () {
 
 update_identity () {
   local identity prev_settings curr_settings diff_string
-  identity="$(git config user.identity)"
+  identity="$(git config ${CURR_IDENTITY_CONFIG_KEY})"
   prev_settings=$(get_current_settings "$identity" | sed -e 's/^/  /')
   use_identity "$identity"
   curr_settings=$(get_current_settings "$identity" | sed -e 's/^/  /')
@@ -204,7 +207,7 @@ print_raw_identity () {
   identity="$1"
 
   if [ "x$identity" = "x" ]; then
-    identity="$(git config user.identity)"
+    identity="$(git config ${CURR_IDENTITY_CONFIG_KEY})"
   fi
 
   if [ -z "$identity" ];
@@ -223,7 +226,7 @@ print_raw_identity () {
 
 print_current_identity () {
   local identity
-  identity="$(git config user.identity)"
+  identity="$(git config ${CURR_IDENTITY_CONFIG_KEY})"
 
   if [ -n "$identity" ];
   then
@@ -245,8 +248,8 @@ define_identity () {
   local sshkey="$4"
   local gpgkey="$5"
 
-  git config --global identity."$identity".name "$name"
-  git config --global identity."$identity".email "$email"
+  git config --global ${IDENTITY_CONFIG_KEY_PREFIX}."$identity".name "$name"
+  git config --global ${IDENTITY_CONFIG_KEY_PREFIX}."$identity".email "$email"
 
   if [ -n "$sshkey" ];
   then
@@ -267,7 +270,7 @@ remove_identity () {
   identity="$1"
   formated_identity="$(format_identity "$identity")"
 
-  git config --global --remove-section identity."$identity"
+  git config --global --remove-section ${IDENTITY_CONFIG_KEY_PREFIX}."$identity"
   echo "Removed $formated_identity"
 }
 
@@ -279,10 +282,10 @@ define_gpg () {
 
   if [ -n "$name" ];
   then
-    git config --global identity."$identity".signingkey "$gpgkey"
+    git config --global ${IDENTITY_CONFIG_KEY_PREFIX}."$identity".signingkey "$gpgkey"
     echo "Added GPG key $gpgkey to $(format_identity "$identity")"
 
-    current_identity="$(git config user.identity)"
+    current_identity="$(git config ${CURR_IDENTITY_CONFIG_KEY})"
     if [ "$current_identity" == "$identity" ]
     then
       use_identity "$identity"
@@ -301,12 +304,12 @@ define_ssh () {
 
   if [ -n "$name" ];
   then
-    git config --global identity."$identity".sshkey "$sshkey"
+    git config --global ${IDENTITY_CONFIG_KEY_PREFIX}."$identity".sshkey "$sshkey"
     echo "Added SSH key $sshkey to $(format_identity "$identity")"
 
     if [ -n "$sshkeyverbosity" ];
     then
-      git config --global identity."$identity".sshkeyverbosity "$sshkeyverbosity"
+      git config --global ${IDENTITY_CONFIG_KEY_PREFIX}."$identity".sshkeyverbosity "$sshkeyverbosity"
     fi
 
     current_identity="$(git config user.identity)"
